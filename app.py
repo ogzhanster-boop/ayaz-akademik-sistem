@@ -17,7 +17,10 @@ if os.path.exists(DATA_FILE):
     df = pd.read_csv(DATA_FILE)
 else:
     df = pd.DataFrame(columns=[
-        "Tarih","Deneme","Turkce","Matematik","Fen","ToplamNet"
+        "Tarih","Deneme",
+        "Turkce","Matematik","Fen",
+        "Inkilap","Din","Ingilizce",
+        "ToplamNet"
     ])
 
 # Sidebar veri girişi
@@ -28,10 +31,16 @@ deneme = st.sidebar.number_input("Deneme Puanı", 0, 500, 400)
 turkce = st.sidebar.number_input("Türkçe Net", 0.0, 20.0, 15.0)
 matematik = st.sidebar.number_input("Matematik Net", 0.0, 20.0, 12.0)
 fen = st.sidebar.number_input("Fen Net", 0.0, 20.0, 14.0)
+inkilap = st.sidebar.number_input("İnkılap Net", 0.0, 10.0, 8.0)
+din = st.sidebar.number_input("Din Net", 0.0, 10.0, 8.0)
+ingilizce = st.sidebar.number_input("İngilizce Net", 0.0, 10.0, 8.0)
 
 if st.sidebar.button("Veriyi Kaydet"):
 
-    toplam_net = turkce + matematik + fen
+    toplam_net = (
+        turkce + matematik + fen +
+        inkilap + din + ingilizce
+    )
 
     yeni_veri = pd.DataFrame({
         "Tarih":[datetime.now()],
@@ -39,6 +48,9 @@ if st.sidebar.button("Veriyi Kaydet"):
         "Turkce":[turkce],
         "Matematik":[matematik],
         "Fen":[fen],
+        "Inkilap":[inkilap],
+        "Din":[din],
+        "Ingilizce":[ingilizce],
         "ToplamNet":[toplam_net]
     })
 
@@ -60,25 +72,26 @@ if not df.empty:
     col2.metric("Ortalama", round(ortalama,1))
     col3.metric("Hedefe Mesafe", HEDEF_PUAN - son_puan)
 
-    # Trend grafiği
     fig = px.line(df, x="Tarih", y="Deneme", title="Deneme Trend")
     st.plotly_chart(fig, use_container_width=True)
 
-    # Ders analizi
+    # Ders ortalamaları
+    dersler = ["Turkce","Matematik","Fen","Inkilap","Din","Ingilizce"]
+    ort_ders = df[dersler].mean()
+
     st.subheader("📚 Ders Analizi")
 
-    ort_ders = df[["Turkce","Matematik","Fen"]].mean()
-    zayif_ders = ort_ders.idxmin()
-
     fig2 = px.bar(
-        ort_ders,
+        x=ort_ders.index,
+        y=ort_ders.values,
         title="Ders Ortalama Netleri"
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.warning(f"Zayıf Ders: {zayif_ders}")
+    zayif_iki = ort_ders.nsmallest(2)
+    st.warning(f"Zayıf Dersler: {zayif_iki.index[0]} ve {zayif_iki.index[1]}")
 
-    # Risk analizi
+    # Trend analizi
     if len(df) > 1:
         x = np.arange(len(df))
         y = df["Deneme"]
@@ -90,7 +103,7 @@ if not df.empty:
         st.write("Tahmini 6 Ay Sonra:", round(tahmini_6ay,1))
 
         if tahmini_6ay < HEDEF_PUAN:
-            st.error("⚠ Hedef risk altında. Çalışma artırılmalı.")
+            st.error("⚠ Hedef risk altında. Haftalık plan artırılmalı.")
         else:
             st.success("✔ Hedef doğrultusunda ilerleniyor.")
 
